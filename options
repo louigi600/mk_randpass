@@ -1,0 +1,61 @@
+#declare -A Myoptions
+#Myoptions=(
+#[i]=":,\t:Run interactively [1=enabled],1" 
+#[h]=",\t\t:Show this help message,0"
+#)
+
+Usage ()
+{ cat <<EOF
+
+$Description
+
+OPTIONS
+EOF
+  I=0
+
+  for i in ${!Myoptions[*]}
+  do
+    Parm=${Myoptions[$i]%%,*}
+    HTxt=$(cut -d "," -f 2 <<< ${Myoptions[$i]})
+    [ "$Parm" = ":" ] && echo -e "-$i <value> $HTxt" || echo -e "-$i $HTxt"
+  done
+
+  echo
+  if [ "$1" != "" ]
+  then
+    echo "Error: $*"
+    exit 1
+  else
+    exit 0
+  fi
+}
+
+GETOPT_STRING=$(
+for i in ${!Myoptions[*]}
+do
+  Parm=${Myoptions[$i]%%,*}
+  echo -en "$i$Parm"
+done
+)
+
+get_myoptions_value ()
+{ #echo "${Myoptions[$1]##*,}"
+  sed 's/\([^,]*,\)\{2\}//' <<< ${Myoptions[$1]}
+}
+
+set_myoptions_value ()
+{ #Myoptions[$1]="${Myoptions[$1]%,*},$2"
+  Myoptions[$1]="$(sed -E 's/^([^,]*(,*[^,]*){1}),.*/\1/' <<< ${Myoptions[$1]}),$2"
+  export Myoptions
+}
+
+wait-n ()
+{ StartJobs="$(jobs -p)"
+  CurJobs="$(jobs -p)"
+  while diff -q  <(echo -e "$StartJobs") <(echo -e "$CurJobs") >/dev/null
+  do
+    sleep 1
+    CurJobs="$(jobs -p)"
+  done
+}
+

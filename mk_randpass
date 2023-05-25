@@ -1,0 +1,118 @@
+#!/bin/bash
+shopt -s extglob
+Name=$(basename $0)
+Description="Random Password generator
+
+usage: $Name [OPTIONS]
+"
+
+SpecialCharList=$'!@#$%^&*()_-+=~?/<>;:{}[]"\''
+
+declare -A Myoptions
+Myoptions=(
+[h]=",\t\t:Show this help message,0"
+[l]=":,\t:Password Lenght,8"
+[n]=":,\t:Numbers,1"
+[S]=":,\t:Special character set,$SpecialCharList"
+[s]=":,\t:Special characters,1"
+[u]=":,\t:Upper case characters,1"
+[v]=",\t\t:Enable debugging output,0"
+)
+
+source $(dirname $0)/options
+
+DEBUG=0
+#DEBUG=1
+grep -qow '\-v' <<< $* && DEBUG=1
+
+[ $DEBUG -eq 1 ] && echo "$GETOPT_STRING"
+
+getopt $GETOPT_STRING $* >/dev/null 2>/dev/null || Usage unknown option or insufficient parameters: $*
+GPO=$(getopt $GETOPT_STRING $* 2>/dev/null |tr -d "'")
+[ "$GPO" != "--" ] && set -- $GPO
+[ $DEBUG -eq 1 ] && echo $GPO
+
+#this type of case matching requites extgob : "shopt -s extglob"
+Parameters="@($(sed  "s/ $//; s/[[:alpha:]]*\([[:alpha:]]\):/\1:/g; s/[[:alpha:]]$//; s/[[:alpha:]]*$//; s/\([[:alpha:]]\):/-\1|/g; s/|$//" <<< $GETOPT_STRING))"
+Flags="@($(sed "s/ $//; s/[[:alpha:]]://g; s/\([[:alpha:]]\)/-\1|/g; s/|$//" <<< $GETOPT_STRING))"
+[ $DEBUG -eq 1 ] && echo -e "\nParameters: $Parameters \nFlags: $Flags"
+
+while [ $# -ge 1 ]
+do
+  case $1 in
+    $Parameters) if [ $DEBUG -eq 1 ]; then echo "$1 $2"; fi; set_myoptions_value ${1#-}  $2; shift 2;;
+    $Flags) if [ $DEBUG -eq 1 ]; then echo "$1"; fi; set_myoptions_value ${1#-} 1; shift;;
+    --) shift ; break ;;
+    *) Usage "$1 unknown option" ;;
+  esac
+done
+
+#echo ">>>$(get_myoptions_value S)"
+
+[ $(get_myoptions_value h) -ne 0 ] && Usage
+[ $(get_myoptions_value l) -le $(($(get_myoptions_value n) + $(get_myoptions_value s) + $(get_myoptions_value u) )) ] && Usage "Password lengh not long enough for all these special options"
+
+[ $DEBUG -eq 1 ] && echo "Password overall lenght: $(get_myoptions_value l) of which $(get_myoptions_value n) numbers, $(get_myoptions_value s) special, $(get_myoptions_value u) upper"
+[ $DEBUG -eq 1 ] && echo "$(get_myoptions_value S)"
+
+Pass=""
+
+#Special
+for ((i=0; i<$(get_myoptions_value s); i++))
+do
+  SPC=$(get_myoptions_value S)
+  j=$(($RANDOM % ${#SPC}))
+  Pass+="${SPC:$j:1}"
+  [ $DEBUG -eq 1 ] && echo "${SPC:$j:1}"
+#  j=$(($RANDOM % ${#SpecialCharList}))
+#  Pass+="${SpecialCharList:$j:1}"
+#  [ $DEBUG -eq 1 ] && echo "${SpecialCharList:$j:1}"
+done
+
+#Number
+for ((i=$i; i<$(get_myoptions_value s) + $(get_myoptions_value n); i++))
+do
+  j=$(($RANDOM % 10))
+  Pass+="$j"
+  [ $DEBUG -eq 1 ] && echo "$j"
+done
+
+#Upper
+for ((i=$i; i<$(get_myoptions_value s) + $(get_myoptions_value n) + $(get_myoptions_value u); i++))
+do
+  AV=$(( $(($RANDOM % 26)) + 65 ))
+  Pass+=$(awk '{printf "%c", $1}' <<< $AV)
+  [ $DEBUG -eq 1 ] && echo "$(awk '{printf "%c", $1}' <<< $AV)"
+done
+
+#Lower
+for ((i=$i; i<$(get_myoptions_value l); i++))
+do
+  AV=$(( $(($RANDOM % 26)) + 97 ))
+  Pass+=$(awk '{printf "%c", $1}' <<< $AV)
+  [ $DEBUG -eq 1 ] && echo "$(awk '{printf "%c", $1}' <<< $AV)"
+done
+
+
+#all
+#while [ $i -lt $(get_myoptions_value l) ]
+#do
+#  AV=$(( $(($RANDOM % 95)) + 33 ))
+# 
+#  [ $AV -eq 92 ] && continue
+#  [ $AV -gt 126 ] && continue
+#   
+#  Pass+=$(awk '{printf "%c", $1}' <<< $AV)
+#  [ $DEBUG -eq 1 ] && echo "$(awk '{printf "%c", $1}' <<< $AV)"
+#  ((i++))
+#done 
+[ $DEBUG -eq 1 ] && echo "Before resorting: $Pass"
+
+#reprint the pass in random order (to place the special characters randomely)
+[ $DEBUG -eq 1 ] && echo -n "Final password:   "
+for ((i=0; i<${#Pass};i++))
+do
+  echo "${Pass:$i:1}"
+done |sort -R | tr -d '\n\r'
+
+echo
