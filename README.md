@@ -5,7 +5,7 @@ usage: mk_randpass [OPTIONS]
 
 OPTIONS
 
--S <value>      :A single quoted, optionally "C-style string" if you need to escape characters, containing the special character list you want to pic from (default all special characters appart from space, del, canc and accented letters )
+-S <value>      :A single quoted, optionally "C-style string" if you need to escape characters, containing the special character list you want to pic from (default all standard ascii special characters after space but not including del)
   
 -v              :Enable debugging output
   
